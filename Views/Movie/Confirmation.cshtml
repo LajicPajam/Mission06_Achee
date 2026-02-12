@@ -1,0 +1,11 @@
+@model Mission06LajicPajam.Models.Movie
+
+@{
+    ViewData["Title"] = "Movie Saved";
+}
+
+<h1>Movie Saved</h1>
+<p>Thanks. <strong>@Model.Title</strong> has been added to the collection.</p>
+<p>
+    <a asp-action="Add" class="btn btn-secondary">Add Another Movie</a>
+</p>
