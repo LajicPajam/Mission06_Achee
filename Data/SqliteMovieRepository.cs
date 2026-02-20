@@ -5,16 +5,19 @@ namespace Mission06LajicPajam.Data;
 
 public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 {
+    // Store the app database inside App_Data so it lives with the project files.
     private readonly string _dbPath = Path.Combine(env.ContentRootPath, "App_Data", "movies.db");
 
     public void InitializeDatabase()
     {
+        // Ensure App_Data exists before sqlite tries to create or open the database file.
         var dbDirectory = Path.GetDirectoryName(_dbPath);
         if (!string.IsNullOrWhiteSpace(dbDirectory))
         {
             Directory.CreateDirectory(dbDirectory);
         }
 
+        // Create the Movies table the first time the app runs.
         ExecuteNonQuery(@"
             CREATE TABLE IF NOT EXISTS Movies (
                 MovieId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,6 +34,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public void SeedFavoriteMovies()
     {
+        // If rows already exist, skip seeding so we do not duplicate starter data.
         var existingCount = ExecuteScalarInt("SELECT COUNT(*) FROM Movies;");
 
         if (existingCount > 0)
@@ -38,6 +42,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
             return;
         }
 
+        // Starter records used for initial demo data in Mission 06.
         var favorites = new List<Movie>
         {
             new()
@@ -80,6 +85,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public void AddMovie(Movie movie)
     {
+        // SQLite stores nullable booleans as 1, 0, or NULL.
         var editedValue = movie.Edited.HasValue ? (movie.Edited.Value ? "1" : "0") : "NULL";
 
         var sql = $@"
@@ -100,6 +106,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private int ExecuteScalarInt(string sql)
     {
+        // Run a query like COUNT(*) and convert the result to an int.
         var output = ExecuteSql(sql).Trim();
         return int.TryParse(output, out var result) ? result : 0;
     }
@@ -111,6 +118,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private string ExecuteSql(string sql)
     {
+        // Execute sqlite3 as a process so no extra DB package is required.
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -131,6 +139,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
         if (process.ExitCode != 0)
         {
+            // Bubble up SQL errors with context to make debugging easier.
             throw new InvalidOperationException($"SQLite command failed: {error}");
         }
 
@@ -139,11 +148,13 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private static string SqlValue(string? value)
     {
+        // Write blank strings as SQL NULL for optional fields.
         if (string.IsNullOrWhiteSpace(value))
         {
             return "NULL";
         }
 
+        // Escape apostrophes so values like O'Brien stay valid SQL literals.
         return $"'{value.Replace("'", "''")}'";
     }
 }
