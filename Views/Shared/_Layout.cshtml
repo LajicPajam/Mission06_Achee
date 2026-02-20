@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - The Joel Hilton Film Collection</title>
+    <title>@ViewData["Title"] - Joel Hilton Movie Collection</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -13,7 +13,7 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-light bg-light border-bottom mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">Joel Hilton Films</a>
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">Joel Hilton Movie Collection</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -23,7 +23,7 @@
                             <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="GetToKnowJoel">Get to Know Joel</a>
+                            <a class="nav-link" asp-controller="Movie" asp-action="Index">Movie List</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Movie" asp-action="Add">Add Movie</a>
@@ -42,7 +42,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            Mission 06 - IS 413
+            Mission 07 - IS 413
         </div>
     </footer>
 

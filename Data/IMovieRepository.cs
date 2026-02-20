@@ -4,7 +4,10 @@ namespace Mission06LajicPajam.Data;
 
 public interface IMovieRepository
 {
-    void InitializeDatabase();
-    void SeedFavoriteMovies();
+    List<Movie> GetMovies();
+    Movie? GetMovieById(int id);
+    List<Category> GetCategories();
     void AddMovie(Movie movie);
+    void UpdateMovie(Movie movie);
+    void DeleteMovie(int id);
 }

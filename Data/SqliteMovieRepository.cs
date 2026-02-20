@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Mission06LajicPajam.Models;
 
 namespace Mission06LajicPajam.Data;
@@ -7,122 +8,106 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 {
     private readonly string _dbPath = Path.Combine(env.ContentRootPath, "App_Data", "movies.db");
 
-    public void InitializeDatabase()
+    public List<Movie> GetMovies()
     {
-        var dbDirectory = Path.GetDirectoryName(_dbPath);
-        if (!string.IsNullOrWhiteSpace(dbDirectory))
-        {
-            Directory.CreateDirectory(dbDirectory);
-        }
+        const string sql = """
+            SELECT MovieId, CategoryId, Title, Year, Director, Rating, Edited, LentTo, CopiedToPlex, Notes
+            FROM Movies
+            ORDER BY Title;
+            """;
 
-        ExecuteNonQuery(@"
-            CREATE TABLE IF NOT EXISTS Movies (
-                MovieId INTEGER PRIMARY KEY AUTOINCREMENT,
-                Category TEXT NOT NULL,
-                Title TEXT NOT NULL,
-                Year TEXT NOT NULL,
-                Director TEXT NOT NULL,
-                Rating TEXT NOT NULL,
-                Edited INTEGER NULL,
-                LentTo TEXT NULL,
-                Notes TEXT NULL
-            );");
+        return RunJsonQuery(sql).Select(ParseMovie).ToList();
     }
 
-    public void SeedFavoriteMovies()
+    public Movie? GetMovieById(int id)
     {
-        var existingCount = ExecuteScalarInt("SELECT COUNT(*) FROM Movies;");
+        var sql = $"""
+            SELECT MovieId, CategoryId, Title, Year, Director, Rating, Edited, LentTo, CopiedToPlex, Notes
+            FROM Movies
+            WHERE MovieId = {id}
+            LIMIT 1;
+            """;
 
-        if (existingCount > 0)
-        {
-            return;
-        }
+        return RunJsonQuery(sql).Select(ParseMovie).FirstOrDefault();
+    }
 
-        var favorites = new List<Movie>
-        {
-            new()
-            {
-                Category = "Action/Adventure",
-                Title = "The Lord of the Rings: The Fellowship of the Ring",
-                Year = "2001",
-                Director = "Peter Jackson",
-                Rating = "PG-13",
-                Edited = false,
-                Notes = "Extended edition"
-            },
-            new()
-            {
-                Category = "Comedy",
-                Title = "The Princess Bride",
-                Year = "1987",
-                Director = "Rob Reiner",
-                Rating = "PG",
-                Edited = null,
-                Notes = "As you wish"
-            },
-            new()
-            {
-                Category = "Family",
-                Title = "Spider-Man: Into the Spider-Verse",
-                Year = "2018",
-                Director = "Peter Ramsey",
-                Rating = "PG",
-                Edited = false,
-                Notes = "Great animation"
-            }
-        };
+    public List<Category> GetCategories()
+    {
+        const string sql = """
+            SELECT CategoryId, CategoryName
+            FROM Categories
+            ORDER BY CategoryName;
+            """;
 
-        foreach (var movie in favorites)
-        {
-            AddMovie(movie);
-        }
+        return RunJsonQuery(sql)
+            .Select(row => new Category
+            {
+                CategoryId = ReadInt(row, "CategoryId"),
+                CategoryName = ReadString(row, "CategoryName") ?? string.Empty
+            })
+            .ToList();
     }
 
     public void AddMovie(Movie movie)
     {
-        var editedValue = movie.Edited.HasValue ? (movie.Edited.Value ? "1" : "0") : "NULL";
-
-        var sql = $@"
-            INSERT INTO Movies (Category, Title, Year, Director, Rating, Edited, LentTo, Notes)
+        var sql = $"""
+            INSERT INTO Movies (CategoryId, Title, Year, Director, Rating, Edited, LentTo, CopiedToPlex, Notes)
             VALUES (
-                {SqlValue(movie.Category)},
-                {SqlValue(movie.Title)},
-                {SqlValue(movie.Year)},
-                {SqlValue(movie.Director)},
-                {SqlValue(movie.Rating)},
-                {editedValue},
-                {SqlValue(movie.LentTo)},
-                {SqlValue(movie.Notes)}
-            );";
+                {NullableInt(movie.CategoryId)},
+                {Quoted(movie.Title)},
+                {movie.Year},
+                {NullableText(movie.Director)},
+                {NullableText(movie.Rating)},
+                {BoolToInt(movie.Edited)},
+                {NullableText(movie.LentTo)},
+                {BoolToInt(movie.CopiedToPlex)},
+                {NullableText(movie.Notes)}
+            );
+            """;
 
-        ExecuteNonQuery(sql);
+        RunNonQuery(sql);
     }
 
-    private int ExecuteScalarInt(string sql)
+    public void UpdateMovie(Movie movie)
     {
-        var output = ExecuteSql(sql).Trim();
-        return int.TryParse(output, out var result) ? result : 0;
+        var sql = $"""
+            UPDATE Movies
+            SET CategoryId = {NullableInt(movie.CategoryId)},
+                Title = {Quoted(movie.Title)},
+                Year = {movie.Year},
+                Director = {NullableText(movie.Director)},
+                Rating = {NullableText(movie.Rating)},
+                Edited = {BoolToInt(movie.Edited)},
+                LentTo = {NullableText(movie.LentTo)},
+                CopiedToPlex = {BoolToInt(movie.CopiedToPlex)},
+                Notes = {NullableText(movie.Notes)}
+            WHERE MovieId = {movie.MovieId};
+            """;
+
+        RunNonQuery(sql);
     }
 
-    private void ExecuteNonQuery(string sql)
+    public void DeleteMovie(int id)
     {
-        ExecuteSql(sql);
+        RunNonQuery($"DELETE FROM Movies WHERE MovieId = {id};");
     }
 
-    private string ExecuteSql(string sql)
+    private IEnumerable<JsonElement> RunJsonQuery(string sql)
     {
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = "sqlite3",
-                ArgumentList = { _dbPath, sql },
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                UseShellExecute = false
             }
         };
+
+        process.StartInfo.ArgumentList.Add("-json");
+        process.StartInfo.ArgumentList.Add(_dbPath);
+        process.StartInfo.ArgumentList.Add(sql);
 
         process.Start();
         var output = process.StandardOutput.ReadToEnd();
@@ -131,19 +116,92 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
         if (process.ExitCode != 0)
         {
-            throw new InvalidOperationException($"SQLite command failed: {error}");
+            throw new InvalidOperationException($"SQLite query failed: {error}");
         }
 
-        return output;
-    }
-
-    private static string SqlValue(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(output))
         {
-            return "NULL";
+            return Enumerable.Empty<JsonElement>();
         }
 
-        return $"'{value.Replace("'", "''")}'";
+        using var doc = JsonDocument.Parse(output);
+        return doc.RootElement.EnumerateArray().Select(el => el.Clone()).ToList();
     }
+
+    private void RunNonQuery(string sql)
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "sqlite3",
+                RedirectStandardError = true,
+                UseShellExecute = false
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add(_dbPath);
+        process.StartInfo.ArgumentList.Add(sql);
+
+        process.Start();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"SQLite update failed: {error}");
+        }
+    }
+
+    private static Movie ParseMovie(JsonElement row)
+    {
+        return new Movie
+        {
+            MovieId = ReadInt(row, "MovieId"),
+            CategoryId = ReadNullableInt(row, "CategoryId"),
+            Title = ReadString(row, "Title") ?? string.Empty,
+            Year = ReadInt(row, "Year"),
+            Director = ReadString(row, "Director"),
+            Rating = ReadString(row, "Rating"),
+            Edited = ReadInt(row, "Edited") == 1,
+            LentTo = ReadString(row, "LentTo"),
+            CopiedToPlex = ReadInt(row, "CopiedToPlex") == 1,
+            Notes = ReadString(row, "Notes")
+        };
+    }
+
+    private static int ReadInt(JsonElement row, string propertyName)
+    {
+        return row.TryGetProperty(propertyName, out var value) && value.ValueKind != JsonValueKind.Null
+            ? value.GetInt32()
+            : 0;
+    }
+
+    private static int? ReadNullableInt(JsonElement row, string propertyName)
+    {
+        if (!row.TryGetProperty(propertyName, out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        return value.GetInt32();
+    }
+
+    private static string? ReadString(JsonElement row, string propertyName)
+    {
+        if (!row.TryGetProperty(propertyName, out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        return value.GetString();
+    }
+
+    private static int BoolToInt(bool value) => value ? 1 : 0;
+
+    private static string NullableInt(int? value) => value.HasValue ? value.Value.ToString() : "NULL";
+
+    private static string NullableText(string? value) => string.IsNullOrWhiteSpace(value) ? "NULL" : Quoted(value);
+
+    private static string Quoted(string value) => $"'{value.Replace("'", "''")}'";
 }

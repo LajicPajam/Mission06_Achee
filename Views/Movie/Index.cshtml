@@ -1,0 +1,40 @@
+@model IEnumerable<Movie>
+@{
+    ViewData["Title"] = "Movie List";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Movie Collection</h2>
+    <a class="btn btn-primary" asp-action="Add">Add Movie</a>
+</div>
+
+<table class="table table-striped table-hover table-bordered align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>Title</th>
+            <th>Year</th>
+            <th>Director</th>
+            <th>Rating</th>
+            <th>Edited</th>
+            <th>Copied To Plex</th>
+            <th style="width: 180px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var movie in Model)
+    {
+        <tr>
+            <td>@movie.Title</td>
+            <td>@movie.Year</td>
+            <td>@movie.Director</td>
+            <td>@movie.Rating</td>
+            <td>@(movie.Edited ? "Yes" : "No")</td>
+            <td>@(movie.CopiedToPlex ? "Yes" : "No")</td>
+            <td>
+                <a class="btn btn-sm btn-outline-secondary me-2" asp-action="Edit" asp-route-id="@movie.MovieId">Edit</a>
+                <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@movie.MovieId">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

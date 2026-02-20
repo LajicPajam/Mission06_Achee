@@ -1,0 +1,75 @@
+@model Movie
+@{
+    var isEdit = Model.MovieId != 0;
+    ViewData["Title"] = isEdit ? "Edit Movie" : "Add Movie";
+}
+
+<h2 class="mb-3">@ViewData["Title"]</h2>
+
+<form asp-action="@(isEdit ? "Edit" : "Add")" method="post">
+    @Html.AntiForgeryToken()
+    <input asp-for="MovieId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Year" class="form-label"></label>
+            <input asp-for="Year" class="form-control" />
+            <span asp-validation-for="Year" class="text-danger"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="CategoryId" class="form-label">Category</label>
+            <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                <option value="">-- Select Category --</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Director" class="form-label"></label>
+            <input asp-for="Director" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Rating" class="form-label"></label>
+            <input asp-for="Rating" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="LentTo" class="form-label"></label>
+            <input asp-for="LentTo" class="form-control" />
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Notes" class="form-label"></label>
+            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Edited" class="form-label">Edited</label>
+            <select asp-for="Edited" class="form-select">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+            <span asp-validation-for="Edited" class="text-danger"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="CopiedToPlex" class="form-label">Copied To Plex</label>
+            <select asp-for="CopiedToPlex" class="form-select">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+            <span asp-validation-for="CopiedToPlex" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

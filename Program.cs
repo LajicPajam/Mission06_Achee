@@ -3,16 +3,9 @@ using Mission06LajicPajam.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddSingleton<IMovieRepository, SqliteMovieRepository>();
+builder.Services.AddScoped<IMovieRepository, SqliteMovieRepository>();
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var repo = scope.ServiceProvider.GetRequiredService<IMovieRepository>();
-    repo.InitializeDatabase();
-    repo.SeedFavoriteMovies();
-}
 
 if (!app.Environment.IsDevelopment())
 {
