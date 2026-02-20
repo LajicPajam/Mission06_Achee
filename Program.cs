@@ -2,26 +2,26 @@ using Mission06LajicPajam.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// MVC with Razor views.
+// Register MVC so controllers can return Razor views.
 builder.Services.AddControllersWithViews();
-// Repository is scoped per web request.
+// Create one repository instance per request to keep database access isolated.
 builder.Services.AddScoped<IMovieRepository, SqliteMovieRepository>();
 
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    // Production-safe error handling and HSTS.
+    // In production, show a friendly error page and force HTTPS.
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
-// Standard ASP.NET Core middleware pipeline.
+// Core request pipeline.
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
 
-// Map static assets and conventional controller routes.
+// Serve CSS/JS and map the default controller/action route.
 app.MapStaticAssets();
 
 app.MapControllerRoute(

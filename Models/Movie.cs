@@ -6,14 +6,14 @@ public class Movie
 {
     public int MovieId { get; set; }
 
-    // Linked to Categories table (optional in the provided schema).
+    // Stores the selected category foreign key. It can be null when no category is chosen.
     public int? CategoryId { get; set; }
 
-    // Required by rubric.
+    // Main display name for the movie in the list and edit screens.
     [Required]
     public string Title { get; set; } = string.Empty;
 
-    // Required by rubric with first-film lower bound.
+    // Enforces realistic movie years and blocks dates before the first known film (1888).
     [Range(1888, 3000, ErrorMessage = "Year must be 1888 or later.")]
     public int Year { get; set; }
 
@@ -21,13 +21,13 @@ public class Movie
 
     public string? Rating { get; set; }
 
-    // Required by rubric.
+    // Tracks whether this entry is an edited version.
     [Required]
     public bool Edited { get; set; }
 
     public string? LentTo { get; set; }
 
-    // Required by rubric.
+    // Tracks whether this movie has been copied into Joel's Plex library.
     [Required]
     public bool CopiedToPlex { get; set; }
 
