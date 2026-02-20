@@ -6,10 +6,12 @@ namespace Mission06LajicPajam.Data;
 
 public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 {
+    // Mission database path inside the project.
     private readonly string _dbPath = Path.Combine(env.ContentRootPath, "App_Data", "movies.db");
 
     public List<Movie> GetMovies()
     {
+        // Pull the full collection for the table view.
         const string sql = """
             SELECT MovieId, CategoryId, Title, Year, Director, Rating, Edited, LentTo, CopiedToPlex, Notes
             FROM Movies
@@ -21,6 +23,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public Movie? GetMovieById(int id)
     {
+        // Fetch one movie for edit/delete screens.
         var sql = $"""
             SELECT MovieId, CategoryId, Title, Year, Director, Rating, Edited, LentTo, CopiedToPlex, Notes
             FROM Movies
@@ -33,6 +36,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public List<Category> GetCategories()
     {
+        // Category dropdown values for the form.
         const string sql = """
             SELECT CategoryId, CategoryName
             FROM Categories
@@ -50,6 +54,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public void AddMovie(Movie movie)
     {
+        // Insert a new row using the required Mission07 schema fields.
         var sql = $"""
             INSERT INTO Movies (CategoryId, Title, Year, Director, Rating, Edited, LentTo, CopiedToPlex, Notes)
             VALUES (
@@ -70,6 +75,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public void UpdateMovie(Movie movie)
     {
+        // Update every editable field by ID.
         var sql = $"""
             UPDATE Movies
             SET CategoryId = {NullableInt(movie.CategoryId)},
@@ -89,11 +95,13 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     public void DeleteMovie(int id)
     {
+        // Hard delete for the selected row.
         RunNonQuery($"DELETE FROM Movies WHERE MovieId = {id};");
     }
 
     private IEnumerable<JsonElement> RunJsonQuery(string sql)
     {
+        // sqlite3 -json returns JSON arrays we can deserialize safely.
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -130,6 +138,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private void RunNonQuery(string sql)
     {
+        // Executes INSERT/UPDATE/DELETE statements.
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -155,6 +164,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private static Movie ParseMovie(JsonElement row)
     {
+        // Maps a sqlite JSON object to the Movie model.
         return new Movie
         {
             MovieId = ReadInt(row, "MovieId"),
@@ -172,6 +182,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private static int ReadInt(JsonElement row, string propertyName)
     {
+        // Treat null/missing values as zero for integer fields.
         return row.TryGetProperty(propertyName, out var value) && value.ValueKind != JsonValueKind.Null
             ? value.GetInt32()
             : 0;
@@ -179,6 +190,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private static int? ReadNullableInt(JsonElement row, string propertyName)
     {
+        // Nullable integer parser for CategoryId.
         if (!row.TryGetProperty(propertyName, out var value) || value.ValueKind == JsonValueKind.Null)
         {
             return null;
@@ -189,6 +201,7 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
 
     private static string? ReadString(JsonElement row, string propertyName)
     {
+        // Handles SQL NULL values gracefully.
         if (!row.TryGetProperty(propertyName, out var value) || value.ValueKind == JsonValueKind.Null)
         {
             return null;
@@ -197,11 +210,14 @@ public class SqliteMovieRepository(IWebHostEnvironment env) : IMovieRepository
         return value.GetString();
     }
 
+    // SQLite stores booleans as 0/1 integers.
     private static int BoolToInt(bool value) => value ? 1 : 0;
 
     private static string NullableInt(int? value) => value.HasValue ? value.Value.ToString() : "NULL";
 
+    // Quote non-empty strings; otherwise send SQL NULL.
     private static string NullableText(string? value) => string.IsNullOrWhiteSpace(value) ? "NULL" : Quoted(value);
 
+    // Minimal escaping to keep apostrophes valid in SQL literals.
     private static string Quoted(string value) => $"'{value.Replace("'", "''")}'";
 }
